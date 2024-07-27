@@ -1,1 +1,42 @@
-
+SELECT
+    pp.default_code AS product_code,
+    pp.name_template AS product_name_template,
+    parent_sl.name AS parent_location_name,
+    sl.name AS location_name,
+    COALESCE(SUM(sq.qty), 0) AS qty_available,
+    COALESCE(moves.total_quantity_l, 0) AS qty_moved_l,
+    COALESCE(moves_r.total_quantity_r, 0) AS qty_moved_r,
+    COALESCE(SUM(sq.qty), 0) + COALESCE(moves_r.total_quantity_r, 0) - COALESCE(moves.total_quantity_l, 0) AS virtual_available
+FROM
+    product_product pp
+    LEFT JOIN stock_quant sq ON sq.product_id = pp.id
+    JOIN stock_location sl ON sq.location_id = sl.id
+    LEFT JOIN stock_location parent_sl ON sl.location_id = parent_sl.id
+    LEFT JOIN (
+        SELECT
+            sm.product_id,
+            sm.location_id,
+            SUM(sm.product_qty) AS total_quantity_l
+        FROM
+            stock_move sm
+        WHERE
+            sm.state NOT IN ('done', 'draft', 'cancel')
+        GROUP BY
+            sm.product_id, sm.location_id
+    ) AS moves ON pp.id = moves.product_id AND sl.id = moves.location_id
+    LEFT JOIN (
+        SELECT
+            sm.product_id,
+            sm.location_dest_id,
+            SUM(sm.product_qty) AS total_quantity_r
+        FROM
+            stock_move sm
+        WHERE
+            sm.state NOT IN ('done', 'draft', 'cancel')
+        GROUP BY
+            sm.product_id, sm.location_dest_id
+    ) AS moves_r ON pp.id = moves_r.product_id AND sl.id = moves_r.location_dest_id
+WHERE  
+    sl.usage = 'internal'
+GROUP BY
+    pp.name_template, pp.default_code, sl.name, parent_sl.name, moves.total_quantity_l, moves_r.total_quantity_r;
