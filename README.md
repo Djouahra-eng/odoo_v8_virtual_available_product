@@ -1,2 +1,2 @@
-# odoo-prPovisional-stock-by-location
-SQL query that calculates odoo provisional stock by location
+# odoo
+Requête SQL qui calcule le stock prévisionnel d'un produit dans odoo par emplacement
