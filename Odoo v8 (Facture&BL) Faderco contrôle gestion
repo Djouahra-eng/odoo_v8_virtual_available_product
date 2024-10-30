@@ -1,0 +1,72 @@
+SELECT
+	ai.id AS invoice_id,
+	ai.type AS TYPE_Factures,
+	rp.id AS CLIENT_ID,
+    rp.name AS CLIENT,
+    rp.partner_latitude AS CLIENT_GPS_LATITUDE,
+    rp.partner_longitude AS CLIENT_GPS_LONGITUDE,
+    tp.name AS TYPE_PV,
+    ct.name AS WILAYA,
+    gt.name AS CLUSTER,
+    ppi.name AS TARIFICATION,
+    drt.name AS ROUTE,
+	ai.amount_total AS MONTANT_A_REGLER,
+    ai.fiscal_stamp_amount AS TIMBRE,
+    ai.payment_mode AS MODE_REGLEMENT,
+    ai.number AS REFERENCE,
+    ai.date_invoice_document AS DATE,
+	pc.name AS FAMILLE,
+    pp.default_code AS CODE,
+    sm.name,
+	sm.product_uom_qty AS QUANTITE,
+	ROUND(sm.sale_amount_untaxed, 2) AS MONTANT_LIGNE_HT,
+    sm.sale_discount AS REMISE,
+	ruru.name AS VENDEUR,
+	sp.name AS BL,
+    sw.name AS PLATEFORME,
+    dp.name AS promotion_name,
+    STRING_AGG(DISTINCT CAST(dpp.discount AS TEXT), ' OU ') AS promotion_discount
+FROM 
+    stock_move sm
+LEFT JOIN 
+    stock_picking sp ON sm.picking_id = sp.id
+LEFT JOIN 
+    account_invoice_line ail ON sp.name = ail.origin
+LEFT JOIN 
+    account_invoice ai ON ail.invoice_id = ai.id
+LEFT JOIN
+    res_partner rp ON ai.partner_id = rp.id
+LEFT JOIN
+    res_partner_type_pv tp ON rp.type_pv_id = tp.id
+LEFT JOIN
+    res_country_state ct ON rp.state_id = ct.id 
+LEFT JOIN
+    res_partner_categ gt ON rp.categ_id = gt.id
+LEFT JOIN
+    res_partner_pricelist_company pl ON rp.id = pl.partner_id
+LEFT JOIN
+    product_pricelist ppi ON pl.pricelist_id = ppi.id
+LEFT JOIN
+    product_product pp ON sm.product_id = pp.id
+LEFT JOIN
+    product_template pt ON pp.product_tmpl_id = pt.id
+LEFT JOIN
+    product_category pc ON pt.categ_id = pc.id
+LEFT JOIN
+    res_users ru ON ai.user_id = ru.id
+LEFT JOIN
+    res_partner ruru ON ru.partner_id = ruru.id
+LEFT JOIN
+    stock_warehouse sw ON ai.warehouse_id = sw.id
+LEFT JOIN
+    distribution_route_template drt ON ai.route_id = drt.id 
+LEFT JOIN 
+    distribution_promotion dp ON sm.promotion_id = dp.id
+LEFT JOIN 
+    distribution_promotion_product dpp ON dpp.promotion_id = dp.id
+WHERE 
+    ai.date_invoice_document >= '2024-09-01' 
+	and ai.date_invoice_document <= '2024-09-05'
+	and (ai.state != 'cancel' and ai.state != 'draft')
+GROUP BY 
+    sm.name, dp.name, ai.id, rp.id, tp.name, ct.name, gt.name, ppi.name, drt.name, pc.name, pp.default_code, sm.product_uom_qty, ROUND(sm.sale_amount_untaxed, 2), sm.sale_discount, ruru.name, sw.name, sp.name;
